@@ -113,3 +113,7 @@ DiscountHunter/DiscountHunter/bin/Debug/net8.0/.playwright/node/linux-arm64/node
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
