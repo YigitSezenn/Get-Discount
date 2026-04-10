@@ -1,109 +1,133 @@
 @echo off
 chcp 65001 >nul
-title İndirim Avcısı
+title İndirim Avcısı - Discount Hunter
 
-echo ══════════════════════════════════════════════════════
-echo    İNDİRİM AVCISI - C# Playwright Otomasyon
-echo ══════════════════════════════════════════════════════
+echo.
+echo ╔══════════════════════════════════════════════════════════╗
+echo ║     İNDİRİM AVCISI / DISCOUNT HUNTER                     ║
+echo ║     C# Playwright Otomasyon                              ║
+echo ╚══════════════════════════════════════════════════════════╝
 echo.
 
 cd /d "%~dp0"
 
-REM .NET kontrolü
+REM ══════════════════════════════════════════════════════
+REM  1. .NET SDK KONTROLÜ
+REM ══════════════════════════════════════════════════════
 echo [1/5] .NET SDK kontrol ediliyor...
 where dotnet >nul 2>nul
 if %ERRORLEVEL% neq 0 (
     echo.
-    echo HATA: .NET SDK bulunamadi!
+    echo ══════════════════════════════════════════════════════
+    echo  HATA: .NET SDK bulunamadi!
+    echo ══════════════════════════════════════════════════════
     echo.
-    echo Lutfen asagidaki adresten .NET 8.0+ SDK indirin:
-    echo https://dotnet.microsoft.com/download/dotnet/8.0
+    echo  Lutfen .NET 9.0 SDK indirin:
+    echo  https://dotnet.microsoft.com/download/dotnet/9.0
     echo.
+    echo  Kurulumdan sonra bu dosyayi tekrar calistirin.
+    echo ══════════════════════════════════════════════════════
+    echo.
+    start https://dotnet.microsoft.com/download/dotnet/9.0
     pause
     exit /b 1
 )
-
 for /f "tokens=*" %%i in ('dotnet --version') do set DOTNET_VER=%%i
-echo    .NET SDK bulundu: %DOTNET_VER%
+echo       OK - .NET %DOTNET_VER% bulundu
 echo.
 
-REM Paketleri yükle
+REM ══════════════════════════════════════════════════════
+REM  2. PAKET YUKLEME (dotnet restore)
+REM ══════════════════════════════════════════════════════
 echo [2/5] NuGet paketleri yukleniyor...
-dotnet restore --verbosity quiet
+dotnet restore >nul 2>nul
 if %ERRORLEVEL% neq 0 (
-    echo HATA: Paketler yuklenemedi!
-    pause
-    exit /b 1
+    echo       Paketler yukleniyor, bekleyin...
+    dotnet restore
 )
-echo    Paketler yuklendi.
+echo       OK - Paketler yuklendi
 echo.
 
-REM Projeyi derle
+REM ══════════════════════════════════════════════════════
+REM  3. PROJE DERLEME (dotnet build)
+REM ══════════════════════════════════════════════════════
 echo [3/5] Proje derleniyor...
-dotnet build --configuration Release --verbosity quiet
+dotnet build --configuration Release -v q >nul 2>nul
 if %ERRORLEVEL% neq 0 (
-    echo HATA: Proje derlenemedi!
-    pause
-    exit /b 1
+    dotnet build --configuration Release
+    if %ERRORLEVEL% neq 0 (
+        echo HATA: Derleme basarisiz!
+        pause
+        exit /b 1
+    )
 )
-echo    Proje derlendi.
+echo       OK - Proje derlendi
 echo.
 
-REM Playwright tarayıcılarını kur
-echo [4/5] Playwright tarayicilari kontrol ediliyor...
+REM ══════════════════════════════════════════════════════
+REM  4. PLAYWRIGHT TARAYICI KURULUMU
+REM ══════════════════════════════════════════════════════
+echo [4/5] Playwright Chromium kontrol ediliyor...
 
 REM Playwright script yolunu bul
-set "PLAYWRIGHT_SCRIPT="
-if exist "bin\Release\net9.0\playwright.ps1" set "PLAYWRIGHT_SCRIPT=bin\Release\net9.0\playwright.ps1"
-if exist "bin\Release\net8.0\playwright.ps1" set "PLAYWRIGHT_SCRIPT=bin\Release\net8.0\playwright.ps1"
-if exist "bin\Debug\net9.0\playwright.ps1" set "PLAYWRIGHT_SCRIPT=bin\Debug\net9.0\playwright.ps1"
-if exist "bin\Debug\net8.0\playwright.ps1" set "PLAYWRIGHT_SCRIPT=bin\Debug\net8.0\playwright.ps1"
+set "PW_SCRIPT="
+for %%F in (bin\Release\net9.0\playwright.ps1 bin\Release\net8.0\playwright.ps1 bin\Debug\net9.0\playwright.ps1) do (
+    if exist "%%F" set "PW_SCRIPT=%%F"
+)
 
-REM Chromium kontrolü ve kurulumu
-if not exist "%LOCALAPPDATA%\ms-playwright\chromium-*" (
-    echo    Playwright Chromium tarayicisi kuruluyor...
-    echo    Bu islem birkaç dakika surebilir, lutfen bekleyin...
+REM Chromium kurulu mu kontrol et
+set "CHROMIUM_EXISTS=0"
+for /d %%D in ("%LOCALAPPDATA%\ms-playwright\chromium-*") do set "CHROMIUM_EXISTS=1"
+for /d %%D in ("%LOCALAPPDATA%\ms-playwright\chromium_headless_shell-*") do (
+    if exist "%%D\chrome-headless-shell-win64\chrome-headless-shell.exe" set "CHROMIUM_EXISTS=1"
+)
+
+if "%CHROMIUM_EXISTS%"=="0" (
+    echo       Playwright Chromium kuruluyor...
+    echo       Bu islem 2-5 dakika surebilir, lutfen bekleyin...
     echo.
     
-    if defined PLAYWRIGHT_SCRIPT (
-        powershell -ExecutionPolicy Bypass -File "%PLAYWRIGHT_SCRIPT%" install chromium
+    if defined PW_SCRIPT (
+        powershell -ExecutionPolicy Bypass -Command "& {Set-Location '%cd%'; & './%PW_SCRIPT%' install chromium}"
     ) else (
-        echo    playwright.ps1 bulunamadi, alternatif yontem deneniyor...
-        dotnet tool install --global Microsoft.Playwright.CLI 2>nul
-        playwright install chromium 2>nul
+        echo       Alternatif kurulum deneniyor...
+        dotnet tool update --global Microsoft.Playwright.CLI >nul 2>nul
+        powershell -Command "$env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User'); playwright install chromium"
     )
     
     if %ERRORLEVEL% neq 0 (
         echo.
-        echo UYARI: Playwright otomatik kurulamadi.
-        echo Lutfen asagidaki komutu manuel calistirin:
+        echo ══════════════════════════════════════════════════════
+        echo  UYARI: Playwright otomatik kurulamadi!
+        echo  Manuel kurulum icin PowerShell'de calistirin:
         echo.
-        echo    powershell -ExecutionPolicy Bypass -File "%PLAYWRIGHT_SCRIPT%" install chromium
+        echo  cd "%cd%"
+        echo  powershell -ExecutionPolicy Bypass -File "%PW_SCRIPT%" install chromium
+        echo ══════════════════════════════════════════════════════
         echo.
         pause
     ) else (
-        echo    Playwright Chromium kuruldu!
+        echo       OK - Playwright Chromium kuruldu
     )
 ) else (
-    echo    Playwright tarayicilari zaten kurulu.
+    echo       OK - Playwright Chromium zaten kurulu
 )
 echo.
 
-REM Son kontrol
-echo [5/5] Baslatma oncesi kontrol...
-echo    Hersey hazir!
+REM ══════════════════════════════════════════════════════
+REM  5. UYGULAMAYI CALISTIR
+REM ══════════════════════════════════════════════════════
+echo [5/5] Uygulama baslatiliyor...
+echo.
+echo ╔══════════════════════════════════════════════════════════╗
+echo ║     TUM KURULUMLAR TAMAMLANDI - BASLATILIYOR...          ║
+echo ╚══════════════════════════════════════════════════════════╝
 echo.
 
-echo ══════════════════════════════════════════════════════
-echo    UYGULAMA BASLATILIYOR
-echo ══════════════════════════════════════════════════════
-echo.
-
-REM Uygulamayı çalıştır
 dotnet run --configuration Release --no-build
 
 echo.
 echo ══════════════════════════════════════════════════════
-echo    Program sonlandi. Kapatmak icin bir tusa basin.
+echo  Program sonlandi. Kapatmak icin bir tusa basin.
 echo ══════════════════════════════════════════════════════
 pause >nul
