@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DiscountHunter")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+982530f9ab5135982ba67c57aa90c1f73a62689e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+28b80b1e34fd6894a93e3be27793e1c2eec6c4f6")]
 [assembly: System.Reflection.AssemblyProductAttribute("DiscountHunter")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DiscountHunter")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
